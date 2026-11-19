@@ -95,6 +95,7 @@ class _SniffDialogState extends State<_SniffDialog> {
   int _bestRank = 0;
   String _pageUrl = '';
   bool _clicked = false;
+  bool _interactive = false;
   int _frameHops = 0;
   String _lastHoppedFrame = '';
   int _loadLogs = 0;
@@ -363,15 +364,34 @@ class _SniffDialogState extends State<_SniffDialog> {
     }
   }
 
+  void _toggleInteractive() {
+    if (_done) return;
+    setState(() => _interactive = !_interactive);
+    if (_interactive) {
+      _deadline?.cancel();
+      _deadline = Timer(const Duration(seconds: 90), () {
+        unawaited(_finish('超时 90s'));
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final screen = MediaQuery.sizeOf(context);
+    final dialogWidth = _interactive
+        ? (screen.width * 0.85).clamp(340.0, 840.0)
+        : 340.0;
+    final viewWidth = dialogWidth - 44;
+    final viewHeight = _interactive
+        ? (screen.height * 0.65).clamp(240.0, 520.0)
+        : 167.0;
     return Center(
       child: Material(
         color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
         child: SizedBox(
-          width: 340,
+          width: dialogWidth,
           child: Padding(
             padding: const EdgeInsets.fromLTRB(22, 20, 22, 12),
             child: Column(
@@ -387,6 +407,20 @@ class _SniffDialogState extends State<_SniffDialog> {
                     ),
                     const SizedBox(width: 12),
                     Text('正在网页嗅探', style: theme.textTheme.titleMedium),
+                    if (_interactive) ...[
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          '请点击页面确认按钮，抓到视频流后将自动关闭',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurface
+                                .withValues(alpha: 0.68),
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -396,8 +430,8 @@ class _SniffDialogState extends State<_SniffDialog> {
                 ClipRRect(
                   borderRadius: BorderRadius.circular(12),
                   child: SizedBox(
-                    width: 296,
-                    height: 167,
+                    width: viewWidth,
+                    height: viewHeight,
                     child: Stack(
                       fit: StackFit.expand,
                       children: [
@@ -468,39 +502,47 @@ class _SniffDialogState extends State<_SniffDialog> {
                             }
                           },
                         ),
-                        Positioned.fill(
-                          child: ColoredBox(
-                            color: theme.colorScheme.surface,
-                            child: Center(
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                ),
-                                child: Text(
-                                  _status,
-                                  textAlign: TextAlign.center,
-                                  maxLines: 3,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    color: theme.colorScheme.onSurface
-                                        .withValues(alpha: 0.76),
-                                    height: 1.5,
+                        if (!_interactive)
+                          Positioned.fill(
+                            child: ColoredBox(
+                              color: theme.colorScheme.surface,
+                              child: Center(
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                  ),
+                                  child: Text(
+                                    _status,
+                                    textAlign: TextAlign.center,
+                                    maxLines: 3,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      color: theme.colorScheme.onSurface
+                                          .withValues(alpha: 0.76),
+                                      height: 1.5,
+                                    ),
                                   ),
                                 ),
                               ),
                             ),
                           ),
-                        ),
                       ],
                     ),
                   ),
                 ),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: () => unawaited(_finish('用户取消')),
-                    child: const Text('取消'),
-                  ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: _toggleInteractive,
+                      child: Text(_interactive ? '隐藏网页' : '显示网页/手动点击'),
+                    ),
+                    const SizedBox(width: 8),
+                    TextButton(
+                      onPressed: () => unawaited(_finish('用户取消')),
+                      child: const Text('取消'),
+                    ),
+                  ],
                 ),
               ],
             ),

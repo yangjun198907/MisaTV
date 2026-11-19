@@ -262,7 +262,8 @@ public class SpiderHost {
     }
 
     static String keyOf(String cls, String[] rest) {
-      return cls + '\u0001' + (rest.length > 0 && rest[0] != null ? rest[0] : "");
+      // 只按爬虫类名复用实例（rest 为方法参数而非 ext，避免 detail/player 丢失 home 阶段获取的 Cookie）
+      return String.valueOf(cls);
     }
 
     static Object acquire(Env env, String cls, String[] rest) throws Exception {
