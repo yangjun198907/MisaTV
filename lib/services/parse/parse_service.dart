@@ -105,6 +105,20 @@ class ParseService {
   }
 
   static String unwrapRelayUrl(String url) {
+    final goProxy = RegExp(
+      r'^https?://(127\.0\.0\.1|localhost):\d+/p/[^/]+/[^/]+/(.+)$',
+      caseSensitive: false,
+    ).firstMatch(url);
+    if (goProxy != null) {
+      try {
+        final decoded = Uri.decodeComponent(goProxy.group(2)!);
+        if (RegExp(r'^https?://', caseSensitive: false).hasMatch(decoded)) {
+          return decoded;
+        }
+      } catch (_) {
+        // 非法编码继续走后续逻辑
+      }
+    }
     if (!RegExp(r'^https?://(127\.0\.0\.1|localhost):\d+/play', caseSensitive: false).hasMatch(url)) {
       return url;
     }
